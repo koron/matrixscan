@@ -14,6 +14,9 @@ void matrix_init(uint* ports, int num, bool out) {
         gpio_init(io);
         gpio_set_dir(io, out);
         gpio_pull_up(io);
+        if (out) {
+            gpio_set_outover(io, GPIO_OVERRIDE_INVERT);
+        }
     }
 }
 
@@ -31,7 +34,8 @@ int main()
     while (true) {
         for (int nrow = 0; nrow < rows_num; nrow++) {
             uint io_row = matrix_rows[nrow];
-            gpio_pull_down(io_row);
+            //gpio_pull_down(io_row);
+            gpio_set_outover(io_row, GPIO_OVERRIDE_NORMAL);
             sleep_us(30);
             for (int ncol = 0; ncol < cols_num; ncol++) {
                 uint io_col = matrix_cols[ncol];
@@ -40,7 +44,8 @@ int main()
                     printf("col=%d row=%d: ON\n", ncol, nrow);
                 }
             }
-            gpio_pull_up(io_row);
+            //gpio_pull_up(io_row);
+            gpio_set_outover(io_row, GPIO_OVERRIDE_INVERT);
         }
     }
 
