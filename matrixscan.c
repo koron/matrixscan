@@ -14,7 +14,7 @@ static const uint matrix_rows[] = MATRIX_ROWS;
 // scan_interval is interval or each matrix scan.
 static const uint16_t scan_interval = 30;
 // debounce is inhibition internal for changing status of each keys.
-static const uint16_t debounce = 150;
+static const uint16_t debounce = 5;
 
 #define COUNT_OF(x) (sizeof(x) / sizeof(x[0]))
 #define COLS_NUM COUNT_OF(matrix_cols)
@@ -25,8 +25,8 @@ static uint32_t mask_rows[ROWS_NUM];
 static uint32_t row_mask;
 
 typedef struct {
-    bool on:1;
-    uint16_t ts:15;
+    bool on;
+    uint8_t last;
 } scan_state;
 
 static scan_state matrix_states[COLS_NUM * ROWS_NUM];
@@ -39,9 +39,9 @@ uint8_t keymap[COLS_NUM * ROWS_NUM] = {
     0, 0, HID_KEY_ALT_LEFT, 0, HID_KEY_SPACE, HID_KEY_GUI_RIGHT, HID_KEY_RETURN, HID_KEY_SHIFT_RIGHT, HID_KEY_CONTROL_RIGHT, 0
 };
 
-void matrix_chagned(uint ncol, uint nrow, bool on) {
-    // TODO: send HID code.
-    printf("matrix: col=%d row=%d: %s\n", ncol, nrow, on ? "ON" : "OFF");
+void matrix_chagned(uint ncol, uint nrow, bool on, uint8_t when) {
+    printf("matrix: changed col=%d row=%d %s when=%d\n",
+            ncol, nrow, on ? "ON" : "OFF", when);
     uint x = ncol + nrow * COLS_NUM;
     uint8_t kc = keymap[x];
     if (on && kc != 0) {
@@ -56,25 +56,35 @@ void matrix_chagned(uint ncol, uint nrow, bool on) {
     }
 }
 
+void matrix_chagne_suppressed(uint ncol, uint nrow, bool on, uint8_t when, uint8_t last, uint8_t elapsed) {
+    //printf("matrix: suppressed: col=%d row=%d %s when=%d last=%d elapsed=%d\n", ncol, nrow, on ? "ON" : "OFF", when, last, elapsed);
+}
+
 bool matrix_task() {
+    static uint8_t count = 0;
     bool changed = false;
     uint x = 0;
-    uint16_t now = (uint16_t)(time_us_32()) & 0x7fff;
     for (uint nrow = 0; nrow < ROWS_NUM; nrow++) {
         gpio_put_masked(row_mask, mask_rows[nrow]);
         sleep_us(scan_interval);
         uint32_t bits = gpio_get_all();
         for (uint ncol = 0; ncol < COLS_NUM; ncol++) {
             bool on = (bits & mask_cols[ncol]) == 0;
-            if (on != matrix_states[x].on && now - matrix_states[x].ts >= debounce) {
-                matrix_states[x].on = on;
-                matrix_states[x].ts = now;
-                matrix_chagned(ncol, nrow, on);
-                changed |= true;
+            if (on != matrix_states[x].on) {
+                uint8_t elapsed = count - matrix_states[x].last;
+                if (elapsed >= debounce) {
+                    matrix_states[x].on = on;
+                    matrix_states[x].last = count;
+                    matrix_chagned(ncol, nrow, on, count);
+                    changed |= true;
+                } else {
+                    matrix_chagne_suppressed(ncol, nrow, on, count, matrix_states[x].last, elapsed);
+                }
             }
             x++;
         }
     }
+    count++;
 }
 
 void matrix_init() {
