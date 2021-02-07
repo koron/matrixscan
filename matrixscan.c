@@ -1,9 +1,12 @@
 #include <stdio.h>
 #include <string.h>
+
 #include "pico/stdlib.h"
 #include "hardware/gpio.h"
+#include "tusb.h"
 
 #include "config.h"
+#include "usb_descriptors.h"
 
 static const uint matrix_cols[] = MATRIX_COLS;
 static const uint matrix_rows[] = MATRIX_ROWS;
@@ -28,9 +31,29 @@ typedef struct {
 
 static scan_state matrix_states[COLS_NUM * ROWS_NUM];
 
+uint8_t keymap[COLS_NUM * ROWS_NUM] = {
+    HID_KEY_ESCAPE, HID_KEY_TAB, HID_KEY_1, HID_KEY_2, HID_KEY_3, HID_KEY_4, HID_KEY_5, HID_KEY_MINUS, HID_KEY_BACKSLASH, HID_KEY_BACKSPACE,
+    HID_KEY_Q, HID_KEY_W, HID_KEY_E, HID_KEY_R, HID_KEY_T, HID_KEY_Y, HID_KEY_U, HID_KEY_I, HID_KEY_O, HID_KEY_P,
+    HID_KEY_A, HID_KEY_S, HID_KEY_D, HID_KEY_F, HID_KEY_G, HID_KEY_H, HID_KEY_J, HID_KEY_K, HID_KEY_L, HID_KEY_SEMICOLON,
+    HID_KEY_Z, HID_KEY_X, HID_KEY_C, HID_KEY_V, HID_KEY_B, HID_KEY_N, HID_KEY_M, HID_KEY_COMMA, HID_KEY_PERIOD, HID_KEY_SLASH,
+    0, 0, HID_KEY_ALT_LEFT, 0, HID_KEY_SPACE, HID_KEY_RETURN, HID_KEY_SHIFT_RIGHT, HID_KEY_CONTROL_RIGHT, 0
+};
+
 void matrix_chagned(uint ncol, uint nrow, bool on) {
     // TODO: send HID code.
     printf("matrix: col=%d row=%d: %s\n", ncol, nrow, on ? "ON" : "OFF");
+    uint x = ncol + nrow * COLS_NUM;
+    uint8_t kc = keymap[x];
+    if (on && kc != 0) {
+        uint8_t keycode[6] = {0};
+        keycode[0] = kc;
+        tud_hid_keyboard_report(REPORT_ID_KEYBOARD, 0, keycode);
+        return;
+    }
+    if (!on) {
+        tud_hid_keyboard_report(REPORT_ID_KEYBOARD, 0, NULL);
+        return;
+    }
 }
 
 bool matrix_task() {
