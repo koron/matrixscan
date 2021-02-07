@@ -33,7 +33,7 @@ void matrix_chagned(uint ncol, uint nrow, bool on) {
     printf("matrix: col=%d row=%d: %s\n", ncol, nrow, on ? "ON" : "OFF");
 }
 
-bool matrix_scan() {
+bool matrix_task() {
     bool changed = false;
     uint x = 0;
     uint16_t now = (uint16_t)(time_us_32()) & 0x7fff;
@@ -52,7 +52,6 @@ bool matrix_scan() {
             x++;
         }
     }
-    return changed;
 }
 
 void matrix_init() {

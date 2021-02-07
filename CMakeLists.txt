@@ -15,7 +15,11 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(matrixscan main.c matrixscan.c )
+add_executable(matrixscan
+	main.c
+	matrixscan.c
+	usb_descriptors.c
+	)
 
 pico_set_program_name(matrixscan "matrixscan")
 pico_set_program_version(matrixscan "0.1")
@@ -23,7 +27,14 @@ pico_set_program_version(matrixscan "0.1")
 pico_enable_stdio_uart(matrixscan 1)
 pico_enable_stdio_usb(matrixscan 0)
 
-# Add the standard library to the build
-target_link_libraries(matrixscan pico_stdlib)
+target_include_directories(matrixscan PRIVATE
+	${CMAKE_CURRENT_LIST_DIR}
+	)
+
+target_link_libraries(matrixscan
+	pico_stdlib
+	tinyusb_device
+	tinyusb_board
+	)
 
 pico_add_extra_outputs(matrixscan)
