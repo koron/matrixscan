@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include "pico/stdlib.h"
 #include "hardware/gpio.h"
 
@@ -6,6 +7,11 @@
 
 static const uint matrix_cols[] = MATRIX_COLS;
 static const uint matrix_rows[] = MATRIX_ROWS;
+
+// scan_interval is interval or each matrix scan.
+static const uint16_t scan_interval = 30;
+// debounce is inhibition internal for changing status of each keys.
+static const uint16_t debounce = 150;
 
 #define COUNT_OF(x) (sizeof(x) / sizeof(x[0]))
 #define COLS_NUM COUNT_OF(matrix_cols)
@@ -15,28 +21,38 @@ static uint32_t mask_cols[COLS_NUM];
 static uint32_t mask_rows[ROWS_NUM];
 static uint32_t row_mask;
 
-bool matrix_states[COLS_NUM * ROWS_NUM];
+typedef struct {
+    bool on:1;
+    uint16_t ts:15;
+} scan_state;
+
+static scan_state matrix_states[COLS_NUM * ROWS_NUM];
 
 void matrix_chagned(uint ncol, uint nrow, bool on) {
     // TODO: send HID code.
     printf("col=%d row=%d: %s\n", ncol, nrow, on ? "ON" : "OFF");
 }
 
-void matrix_scan() {
+bool matrix_scan() {
+    bool changed = false;
     uint x = 0;
+    uint16_t now = (uint16_t)(time_us_32()) & 0x7fff;
     for (uint nrow = 0; nrow < ROWS_NUM; nrow++) {
         gpio_put_masked(row_mask, mask_rows[nrow]);
-        sleep_us(30);
+        sleep_us(scan_interval);
         uint32_t bits = gpio_get_all();
         for (uint ncol = 0; ncol < COLS_NUM; ncol++) {
             bool on = (bits & mask_cols[ncol]) == 0;
-            if (on != matrix_states[x]) {
-                matrix_states[x] = on;
+            if (on != matrix_states[x].on && now - matrix_states[x].ts >= debounce) {
+                matrix_states[x].on = on;
+                matrix_states[x].ts = now;
                 matrix_chagned(ncol, nrow, on);
+                changed |= true;
             }
             x++;
         }
     }
+    return changed;
 }
 
 void matrix_init() {
@@ -59,15 +75,14 @@ void matrix_init() {
     for (int i = 0; i < ROWS_NUM; i++) {
         mask_rows[i] &= mask;
     }
-    for (int i = 0; i < COUNT_OF(matrix_states); i++) {
-        matrix_states[i] = false;
-    }
+    memset(matrix_states, 0, sizeof(matrix_states));
 }
 
 int main()
 {
     stdio_init_all();
     printf("Matrix Scanner start\n");
+    printf("sizeof(matrix_states)=%d\n", sizeof(matrix_states));
 
     matrix_init();
 
