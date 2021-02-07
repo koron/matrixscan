@@ -39,30 +39,23 @@ uint8_t keymap[COLS_NUM * ROWS_NUM] = {
     0, 0, HID_KEY_ALT_LEFT, 0, HID_KEY_SPACE, HID_KEY_GUI_RIGHT, HID_KEY_RETURN, HID_KEY_SHIFT_RIGHT, HID_KEY_CONTROL_RIGHT, 0
 };
 
+static void hid_kb_report(uint8_t code, bool on);
+
 void matrix_chagned(uint ncol, uint nrow, bool on, uint8_t when) {
-    printf("matrix: changed col=%d row=%d %s when=%d\n",
-            ncol, nrow, on ? "ON" : "OFF", when);
-    uint x = ncol + nrow * COLS_NUM;
-    uint8_t kc = keymap[x];
-    if (on && kc != 0) {
-        uint8_t keycode[6] = {0};
-        keycode[0] = kc;
-        tud_hid_keyboard_report(REPORT_ID_KEYBOARD, 0, keycode);
-        return;
-    }
-    if (!on) {
-        tud_hid_keyboard_report(REPORT_ID_KEYBOARD, 0, NULL);
-        return;
+    //printf("matrix_changed: col=%d row=%d %s when=%d\n", ncol, nrow, on ? "ON" : "OFF", when);
+    uint8_t code = keymap[ncol + nrow * COLS_NUM];
+    if (code != 0) {
+        hid_kb_report(code, on);
     }
 }
 
-void matrix_chagne_suppressed(uint ncol, uint nrow, bool on, uint8_t when, uint8_t last, uint8_t elapsed) {
-    //printf("matrix: suppressed: col=%d row=%d %s when=%d last=%d elapsed=%d\n", ncol, nrow, on ? "ON" : "OFF", when, last, elapsed);
+static void matrix_suppressed(uint ncol, uint nrow, bool on, uint8_t when, uint8_t last, uint8_t elapsed) {
+    //printf("matrix_suppressed: col=%d row=%d %s when=%d last=%d elapsed=%d\n", ncol, nrow, on ? "ON" : "OFF", when, last, elapsed);
 }
 
-bool matrix_task() {
+// matrix_task scan whole switch matrix.
+void matrix_task() {
     static uint8_t count = 0;
-    bool changed = false;
     uint x = 0;
     for (uint nrow = 0; nrow < ROWS_NUM; nrow++) {
         gpio_put_masked(row_mask, mask_rows[nrow]);
@@ -76,9 +69,8 @@ bool matrix_task() {
                     matrix_states[x].on = on;
                     matrix_states[x].last = count;
                     matrix_chagned(ncol, nrow, on, count);
-                    changed |= true;
                 } else {
-                    matrix_chagne_suppressed(ncol, nrow, on, count, matrix_states[x].last, elapsed);
+                    matrix_suppressed(ncol, nrow, on, count, matrix_states[x].last, elapsed);
                 }
             }
             x++;
@@ -88,7 +80,7 @@ bool matrix_task() {
 }
 
 void matrix_init() {
-    printf("matrix: sizeof(matrix_states)=%d\n", sizeof(matrix_states));
+    printf("matrix_init: sizeof(matrix_states)=%d\n", sizeof(matrix_states));
     for (int i = 0; i < COLS_NUM; i++) {
         uint io = matrix_cols[i];
         gpio_init(io);
@@ -109,4 +101,102 @@ void matrix_init() {
         mask_rows[i] &= mask;
     }
     memset(matrix_states, 0, sizeof(matrix_states));
+}
+
+static bool hid_kb_changed = false;
+static uint8_t hid_kb_mod = 0;
+static uint8_t hid_kb_code[6] = {0};
+
+// hid_kb_report composes keyboard report which will be send.
+static void hid_kb_report(uint8_t code, bool on) {
+    //printf("hid_kb_report: %02X %s\n", code, on ? "ON" : "OFF");
+
+    // consider modifier.
+    uint8_t mod = 0;
+    switch (code) {
+        case HID_KEY_CONTROL_LEFT:
+            mod = KEYBOARD_MODIFIER_LEFTCTRL;
+            break;
+        case HID_KEY_SHIFT_LEFT:
+            mod = KEYBOARD_MODIFIER_LEFTSHIFT;
+            break;
+        case HID_KEY_ALT_LEFT:
+            mod = KEYBOARD_MODIFIER_LEFTALT;
+            break;
+        case HID_KEY_GUI_LEFT:
+            mod = KEYBOARD_MODIFIER_LEFTGUI;
+            break;
+        case HID_KEY_CONTROL_RIGHT:
+            mod = KEYBOARD_MODIFIER_RIGHTCTRL;
+            break;
+        case HID_KEY_SHIFT_RIGHT:
+            mod = KEYBOARD_MODIFIER_RIGHTSHIFT;
+            break;
+        case HID_KEY_ALT_RIGHT:
+            mod = KEYBOARD_MODIFIER_RIGHTALT;
+            break;
+        case HID_KEY_GUI_RIGHT:
+            mod = KEYBOARD_MODIFIER_RIGHTGUI;
+            break;
+    }
+    if (mod != 0) {
+        if (on) {
+            hid_kb_mod |= mod;
+        } else {
+            hid_kb_mod &= ~mod;
+        }
+        hid_kb_changed |= true;
+        return;
+    }
+
+    // change hid_kb_code.
+    int found = -1, vacant = -1;
+    for (int i = 0; i < COUNT_OF(hid_kb_code); i++) {
+        if (vacant < 0 && hid_kb_code[i] == 0) {
+            vacant = i;
+        }
+        if (found < 0 && hid_kb_code[i] == code) {
+            found = i;
+        }
+    }
+    // when key up.
+    if (!on) {
+        if (found >= 0) {
+            hid_kb_code[found] = 0;
+            hid_kb_changed |= true;
+        }
+        return;
+    }
+    // when key down.
+    if (found >= 0 || vacant < 0) {
+        return;
+    }
+    hid_kb_code[vacant] = code;
+    hid_kb_changed |= true;
+}
+
+void hid_task() {
+    if (hid_kb_changed) {
+        // clean up hid_kb_code. remove intermediate zeros, padding non-zero
+        // codes to left.
+        bool aligned = false;
+        uint8_t tmp[6] = {0};
+        for (int i = 0, j = 0; i < COUNT_OF(hid_kb_code); i++) {
+            if (hid_kb_code[i] != 0) {
+                tmp[j] = hid_kb_code[i];
+                if (j != i) {
+                    aligned |= true;
+                }
+                j++;
+            }
+        }
+        if (aligned) {
+            memcpy(hid_kb_code, tmp, sizeof(hid_kb_code));
+        }
+        // send keyboard report with boot protocol.
+        //printf("hid_task: keyboard: %02X (%02X %02X %02X %02X %02X %02X)\n", hid_kb_mod, hid_kb_code[0], hid_kb_code[1], hid_kb_code[2], hid_kb_code[3], hid_kb_code[4], hid_kb_code[5]);
+        tud_hid_keyboard_report(REPORT_ID_KEYBOARD, hid_kb_mod, hid_kb_code);
+        // clear changed flag.
+        hid_kb_changed = false;
+    }
 }

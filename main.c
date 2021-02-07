@@ -27,13 +27,14 @@ int main()
     board_init();
     tusb_init();
     stdio_init_all();
-    printf("Prototype Keyboard start\n");
-
     matrix_init();
+
+    printf("Prototype Keyboard start\n");
 
     while (true) {
         tud_task(); // tinyusb device task
         matrix_task();
+        hid_task();
     }
 
     return 0;

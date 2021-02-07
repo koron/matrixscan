@@ -5,7 +5,9 @@ extern "C" {
 #endif
 
 void matrix_init();
-bool matrix_task();
+void matrix_task();
+
+void hid_task();
 
 #ifdef __cplusplus
 }
