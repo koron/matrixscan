@@ -80,7 +80,7 @@ void matrix_task() {
 }
 
 void matrix_init() {
-    printf("matrix_init: sizeof(matrix_states)=%d\n", sizeof(matrix_states));
+    //printf("matrix_init: sizeof(matrix_states)=%d\n", sizeof(matrix_states));
     for (int i = 0; i < COLS_NUM; i++) {
         uint io = matrix_cols[i];
         gpio_init(io);

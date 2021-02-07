@@ -11,7 +11,7 @@
 // Return zero will cause the stack to STALL request
 uint16_t tud_hid_get_report_cb(uint8_t report_id, hid_report_type_t report_type, uint8_t *buffer, uint16_t reqlen) {
     // TODO not Implemented
-    printf("tud_hid_get_report_cb: id=%d type=%d buf=%p len=%d\n", report_id, report_type, buffer, reqlen);
+    //printf("tud_hid_get_report_cb: id=%d type=%d buf=%p len=%d\n", report_id, report_type, buffer, reqlen);
     return 0;
 }
 
@@ -19,7 +19,7 @@ uint16_t tud_hid_get_report_cb(uint8_t report_id, hid_report_type_t report_type,
 // received data on OUT endpoint ( Report ID = 0, Type = 0 )
 void tud_hid_set_report_cb(uint8_t report_id, hid_report_type_t report_type, uint8_t const *buffer, uint16_t bufsize) {
     // TODO set LED based on CAPLOCK, NUMLOCK etc...
-    printf("tud_hid_set_report_cb: id=%d type=%d buf=%p size=%d\n", report_id, report_type, buffer, bufsize);
+    //printf("tud_hid_set_report_cb: id=%d type=%d buf=%p size=%d\n", report_id, report_type, buffer, bufsize);
 }
 
 int main()
