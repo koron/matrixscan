@@ -30,7 +30,7 @@ static scan_state matrix_states[COLS_NUM * ROWS_NUM];
 
 void matrix_chagned(uint ncol, uint nrow, bool on) {
     // TODO: send HID code.
-    printf("col=%d row=%d: %s\n", ncol, nrow, on ? "ON" : "OFF");
+    printf("matrix: col=%d row=%d: %s\n", ncol, nrow, on ? "ON" : "OFF");
 }
 
 bool matrix_scan() {
@@ -56,6 +56,7 @@ bool matrix_scan() {
 }
 
 void matrix_init() {
+    printf("matrix: sizeof(matrix_states)=%d\n", sizeof(matrix_states));
     for (int i = 0; i < COLS_NUM; i++) {
         uint io = matrix_cols[i];
         gpio_init(io);
@@ -76,19 +77,4 @@ void matrix_init() {
         mask_rows[i] &= mask;
     }
     memset(matrix_states, 0, sizeof(matrix_states));
-}
-
-int main()
-{
-    stdio_init_all();
-    printf("Matrix Scanner start\n");
-    printf("sizeof(matrix_states)=%d\n", sizeof(matrix_states));
-
-    matrix_init();
-
-    while (true) {
-        matrix_scan();
-    }
-
-    return 0;
 }

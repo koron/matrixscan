@@ -15,7 +15,7 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(matrixscan matrixscan.c )
+add_executable(matrixscan main.c matrixscan.c )
 
 pico_set_program_name(matrixscan "matrixscan")
 pico_set_program_version(matrixscan "0.1")
