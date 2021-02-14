@@ -4,7 +4,10 @@
 #include "bsp/board.h"
 #include "tusb.h"
 
+#include "config.h"
 #include "matrixscan.h"
+#include "layer.h"
+#include "hid.h"
 
 // Invoked when received GET_REPORT control request
 // Application must fill buffer report's content and return its length.
@@ -21,6 +24,21 @@ void tud_hid_set_report_cb(uint8_t report_id, hid_report_type_t report_type, uin
     // TODO set LED based on CAPLOCK, NUMLOCK etc...
     //printf("tud_hid_set_report_cb: id=%d type=%d buf=%p size=%d\n", report_id, report_type, buffer, bufsize);
 }
+
+#if 1 // link matrixscan to layer and hid.
+
+void matrix_changed(uint ncol, uint nrow, bool on, uint8_t when) {
+    //printf("matrix_changed: col=%d row=%d %s when=%d\n", ncol, nrow, on ? "ON" : "OFF", when);
+    uint8_t code = layer_getcode(ncol, nrow, on);
+    if (code != 0) {
+        hidkb_report_code(code, on);
+    }
+}
+
+void matrix_suppressed(uint ncol, uint nrow, bool on, uint8_t when, uint8_t last, uint8_t elapsed) {
+    //printf("matrix_suppressed: col=%d row=%d %s when=%d last=%d elapsed=%d\n", ncol, nrow, on ? "ON" : "OFF", when, last, elapsed);
+}
+#endif
 
 int main()
 {

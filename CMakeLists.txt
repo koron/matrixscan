@@ -18,9 +18,13 @@ pico_sdk_init()
 add_executable(matrixscan
 	main.c
 	matrixscan.c
+	layer.c
 	usb_descriptors.c
 	hid.c
 	)
+
+# Link Time Optimization is not supported yet.
+#set_property(TARGET matrixscan PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 
 pico_set_program_name(matrixscan "matrixscan")
 pico_set_program_version(matrixscan "0.1")
