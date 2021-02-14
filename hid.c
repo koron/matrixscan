@@ -1,0 +1,113 @@
+#include "pico/stdlib.h"
+#include "tusb.h"
+
+#include "config.h"
+#include "usb_descriptors.h"
+
+#define COUNT_OF(x) (sizeof(x) / sizeof(x[0]))
+
+static bool hidkb_changed = false;
+static uint8_t hidkb_mod = 0;
+static uint8_t hidkb_code[6] = {0};
+
+static uint8_t hidkb_code2mod(uint8_t code) {
+    uint8_t mod = 0;
+    switch (code) {
+        case HID_KEY_CONTROL_LEFT:
+            mod = KEYBOARD_MODIFIER_LEFTCTRL;
+            break;
+        case HID_KEY_SHIFT_LEFT:
+            mod = KEYBOARD_MODIFIER_LEFTSHIFT;
+            break;
+        case HID_KEY_ALT_LEFT:
+            mod = KEYBOARD_MODIFIER_LEFTALT;
+            break;
+        case HID_KEY_GUI_LEFT:
+            mod = KEYBOARD_MODIFIER_LEFTGUI;
+            break;
+        case HID_KEY_CONTROL_RIGHT:
+            mod = KEYBOARD_MODIFIER_RIGHTCTRL;
+            break;
+        case HID_KEY_SHIFT_RIGHT:
+            mod = KEYBOARD_MODIFIER_RIGHTSHIFT;
+            break;
+        case HID_KEY_ALT_RIGHT:
+            mod = KEYBOARD_MODIFIER_RIGHTALT;
+            break;
+        case HID_KEY_GUI_RIGHT:
+            mod = KEYBOARD_MODIFIER_RIGHTGUI;
+            break;
+    }
+    return mod;
+}
+
+// hidkb_report_code composes keyboard report which will be send.
+void hidkb_report_code(uint8_t code, bool on) {
+    //printf("hidkb_report_code: %02X %s\n", code, on ? "ON" : "OFF");
+    // update modifier states.
+    uint8_t mod = hidkb_code2mod(code);
+    if (mod != 0) {
+        if (on) {
+            hidkb_mod |= mod;
+        } else {
+            hidkb_mod &= ~mod;
+        }
+        hidkb_changed |= true;
+        return;
+    }
+    // update hidkb_code.
+    int found = -1, vacant = -1;
+    for (int i = 0; i < COUNT_OF(hidkb_code); i++) {
+        if (vacant < 0 && hidkb_code[i] == 0) {
+            vacant = i;
+        }
+        if (found < 0 && hidkb_code[i] == code) {
+            found = i;
+        }
+    }
+    // when key up.
+    if (!on) {
+        if (found >= 0) {
+            hidkb_code[found] = 0;
+            hidkb_changed |= true;
+        }
+        return;
+    }
+    // when key down.
+    if (found >= 0 || vacant < 0) {
+        return;
+    }
+    hidkb_code[vacant] = code;
+    hidkb_changed |= true;
+}
+
+static void hidkb_task() {
+    if (!hidkb_changed) {
+        return;
+    }
+    // clean up hidkb_code. remove intermediate zeros, padding non-zero
+    // codes to left.
+    bool aligned = false;
+    uint8_t tmp[6] = {0};
+    for (int i = 0, j = 0; i < COUNT_OF(hidkb_code); i++) {
+        if (hidkb_code[i] != 0) {
+            tmp[j] = hidkb_code[i];
+            if (j != i) {
+                aligned |= true;
+            }
+            j++;
+        }
+    }
+    if (aligned) {
+        memcpy(hidkb_code, tmp, sizeof(hidkb_code));
+    }
+    // send keyboard report with boot protocol.
+    //printf("hid_task: keyboard: %02X (%02X %02X %02X %02X %02X %02X)\n", hidkb_mod, hidkb_code[0], hidkb_code[1], hidkb_code[2], hidkb_code[3], hidkb_code[4], hidkb_code[5]);
+    tud_hid_keyboard_report(REPORT_ID_KEYBOARD, hidkb_mod, hidkb_code);
+    // clear changed flag.
+    hidkb_changed = false;
+}
+
+void hid_task() {
+    hidkb_task();
+}

@@ -6,14 +6,14 @@
 #include "tusb.h"
 
 #include "config.h"
-#include "usb_descriptors.h"
+#include "hid.h"
 
 static const uint matrix_cols[] = MATRIX_COLS;
 static const uint matrix_rows[] = MATRIX_ROWS;
 
-// scan_interval is interval or each matrix scan.
+// scan_interval is interval for each row scanning of matrix (us).
 static const uint16_t scan_interval = 30;
-// debounce is inhibition internal for changing status of each keys.
+// debounce is inhibition interval for changing status of each keys.
 static const uint16_t debounce = 5;
 
 #define COUNT_OF(x) (sizeof(x) / sizeof(x[0]))
@@ -39,13 +39,11 @@ uint8_t keymap[COLS_NUM * ROWS_NUM] = {
     0, 0, HID_KEY_ALT_LEFT, 0, HID_KEY_SPACE, HID_KEY_GUI_RIGHT, HID_KEY_RETURN, HID_KEY_SHIFT_RIGHT, HID_KEY_CONTROL_RIGHT, 0
 };
 
-static void hid_kb_report(uint8_t code, bool on);
-
 void matrix_chagned(uint ncol, uint nrow, bool on, uint8_t when) {
     //printf("matrix_changed: col=%d row=%d %s when=%d\n", ncol, nrow, on ? "ON" : "OFF", when);
     uint8_t code = keymap[ncol + nrow * COLS_NUM];
     if (code != 0) {
-        hid_kb_report(code, on);
+        hidkb_report_code(code, on);
     }
 }
 
@@ -101,102 +99,4 @@ void matrix_init() {
         mask_rows[i] &= mask;
     }
     memset(matrix_states, 0, sizeof(matrix_states));
-}
-
-static bool hid_kb_changed = false;
-static uint8_t hid_kb_mod = 0;
-static uint8_t hid_kb_code[6] = {0};
-
-// hid_kb_report composes keyboard report which will be send.
-static void hid_kb_report(uint8_t code, bool on) {
-    //printf("hid_kb_report: %02X %s\n", code, on ? "ON" : "OFF");
-
-    // consider modifier.
-    uint8_t mod = 0;
-    switch (code) {
-        case HID_KEY_CONTROL_LEFT:
-            mod = KEYBOARD_MODIFIER_LEFTCTRL;
-            break;
-        case HID_KEY_SHIFT_LEFT:
-            mod = KEYBOARD_MODIFIER_LEFTSHIFT;
-            break;
-        case HID_KEY_ALT_LEFT:
-            mod = KEYBOARD_MODIFIER_LEFTALT;
-            break;
-        case HID_KEY_GUI_LEFT:
-            mod = KEYBOARD_MODIFIER_LEFTGUI;
-            break;
-        case HID_KEY_CONTROL_RIGHT:
-            mod = KEYBOARD_MODIFIER_RIGHTCTRL;
-            break;
-        case HID_KEY_SHIFT_RIGHT:
-            mod = KEYBOARD_MODIFIER_RIGHTSHIFT;
-            break;
-        case HID_KEY_ALT_RIGHT:
-            mod = KEYBOARD_MODIFIER_RIGHTALT;
-            break;
-        case HID_KEY_GUI_RIGHT:
-            mod = KEYBOARD_MODIFIER_RIGHTGUI;
-            break;
-    }
-    if (mod != 0) {
-        if (on) {
-            hid_kb_mod |= mod;
-        } else {
-            hid_kb_mod &= ~mod;
-        }
-        hid_kb_changed |= true;
-        return;
-    }
-
-    // change hid_kb_code.
-    int found = -1, vacant = -1;
-    for (int i = 0; i < COUNT_OF(hid_kb_code); i++) {
-        if (vacant < 0 && hid_kb_code[i] == 0) {
-            vacant = i;
-        }
-        if (found < 0 && hid_kb_code[i] == code) {
-            found = i;
-        }
-    }
-    // when key up.
-    if (!on) {
-        if (found >= 0) {
-            hid_kb_code[found] = 0;
-            hid_kb_changed |= true;
-        }
-        return;
-    }
-    // when key down.
-    if (found >= 0 || vacant < 0) {
-        return;
-    }
-    hid_kb_code[vacant] = code;
-    hid_kb_changed |= true;
-}
-
-void hid_task() {
-    if (hid_kb_changed) {
-        // clean up hid_kb_code. remove intermediate zeros, padding non-zero
-        // codes to left.
-        bool aligned = false;
-        uint8_t tmp[6] = {0};
-        for (int i = 0, j = 0; i < COUNT_OF(hid_kb_code); i++) {
-            if (hid_kb_code[i] != 0) {
-                tmp[j] = hid_kb_code[i];
-                if (j != i) {
-                    aligned |= true;
-                }
-                j++;
-            }
-        }
-        if (aligned) {
-            memcpy(hid_kb_code, tmp, sizeof(hid_kb_code));
-        }
-        // send keyboard report with boot protocol.
-        //printf("hid_task: keyboard: %02X (%02X %02X %02X %02X %02X %02X)\n", hid_kb_mod, hid_kb_code[0], hid_kb_code[1], hid_kb_code[2], hid_kb_code[3], hid_kb_code[4], hid_kb_code[5]);
-        tud_hid_keyboard_report(REPORT_ID_KEYBOARD, hid_kb_mod, hid_kb_code);
-        // clear changed flag.
-        hid_kb_changed = false;
-    }
 }

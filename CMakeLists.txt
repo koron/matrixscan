@@ -19,6 +19,7 @@ add_executable(matrixscan
 	main.c
 	matrixscan.c
 	usb_descriptors.c
+	hid.c
 	)
 
 pico_set_program_name(matrixscan "matrixscan")
