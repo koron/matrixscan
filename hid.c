@@ -5,6 +5,7 @@
 
 #include "config.h"
 #include "usb_descriptors.h"
+#include "keycodes.h"
 
 #define COUNT_OF(x) (sizeof(x) / sizeof(x[0]))
 
@@ -15,28 +16,28 @@ static uint8_t hidkb_code[6] = {0};
 static uint8_t hidkb_code2mod(uint8_t code) {
     uint8_t mod = 0;
     switch (code) {
-        case HID_KEY_CONTROL_LEFT:
+        case KC_LCTRL:  // HID_KEY_CONTROL_LEFT
             mod = KEYBOARD_MODIFIER_LEFTCTRL;
             break;
-        case HID_KEY_SHIFT_LEFT:
+        case KC_LSHIFT: // HID_KEY_SHIFT_LEFT
             mod = KEYBOARD_MODIFIER_LEFTSHIFT;
             break;
-        case HID_KEY_ALT_LEFT:
+        case KC_LALT:   // HID_KEY_ALT_LEFT
             mod = KEYBOARD_MODIFIER_LEFTALT;
             break;
-        case HID_KEY_GUI_LEFT:
+        case KC_LGUI:   // HID_KEY_GUI_LEFT
             mod = KEYBOARD_MODIFIER_LEFTGUI;
             break;
-        case HID_KEY_CONTROL_RIGHT:
+        case KC_RCTRL:  // HID_KEY_CONTROL_RIGHT
             mod = KEYBOARD_MODIFIER_RIGHTCTRL;
             break;
-        case HID_KEY_SHIFT_RIGHT:
+        case KC_RSHIFT: // HID_KEY_SHIFT_RIGHT
             mod = KEYBOARD_MODIFIER_RIGHTSHIFT;
             break;
-        case HID_KEY_ALT_RIGHT:
+        case KC_RALT:   // HID_KEY_ALT_RIGHT
             mod = KEYBOARD_MODIFIER_RIGHTALT;
             break;
-        case HID_KEY_GUI_RIGHT:
+        case KC_RGUI:   // HID_KEY_GUI_RIGHT
             mod = KEYBOARD_MODIFIER_RIGHTGUI;
             break;
     }
