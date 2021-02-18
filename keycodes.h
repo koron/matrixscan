@@ -244,3 +244,8 @@ enum hid_keyboard_keypad_usage {
     KC_RALT         = 0xE6,
     KC_RGUI         = 0xE7
 };
+
+#define KCX(n)		(0x8000 | ((n) & 0x7FFF))
+#define IS_KCX(n)	(((n) & 0x8000) != 0)
+
+#define KC_TRNS		KCX(0)
