@@ -9,6 +9,8 @@ extern "C" {
 bool layer_is_enabled(int layer);
 void layer_set_enable(int layer);
 void layer_set_disable(int layer);
+void layer_set(int layer, bool enable);
+void layer_toggle(int layer);
 
 uint8_t layer_getcode(uint ncol, uint nrow, bool on);
 

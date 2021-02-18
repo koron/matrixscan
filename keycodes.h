@@ -245,7 +245,18 @@ enum hid_keyboard_keypad_usage {
     KC_RGUI         = 0xE7
 };
 
-#define KCX(n)		(0x8000 | ((n) & 0x7FFF))
-#define IS_KCX(n)	(((n) & 0x8000) != 0)
+#define KCX(n)			(0x8000 | ((n) & 0x7FFF))
+#define KCX_G(c, m, x)		KCX((c) | ((x) & (m)))
 
-#define KC_TRNS		KCX(0)
+#define KCX_TRNS		KCX(0x0000)
+#define KCX_MO(x)		KCX_G(0x0100, 0x1F, x)
+#define KCX_TG(x)		KCX_G(0x0120, 0x1F, x)
+#define KCX_TO(x)		KCX_G(0x0140, 0x1F, x)
+#define KCX_LRST		KCX(0x00FF)
+
+// Quantum compatible functional keycodes.
+
+#define KC_TRNS			KCX_TRNS
+#define MO(n)			KCX_MO(n)
+#define TG(n)			KCX_TG(n)
+#define TO(n)			KCX_TO(n)
