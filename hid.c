@@ -119,21 +119,21 @@ void hid_task() {
 //
 // Application must fill buffer report's content and return its length.
 // Return zero will cause the stack to STALL request.
-__attribute__((weak)) uint16_t hid_get_report_cb(uint8_t report_id, hid_report_type_t report_type, uint8_t *buffer, uint16_t reqlen) {
-    printf("hid_get_report_cb(weak stub): id=%d type=%d buf=%p len=%d\n", report_id, report_type, buffer, reqlen);
+__attribute__((weak)) uint16_t hid_get_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_t report_type, uint8_t *buffer, uint16_t reqlen) {
+    printf("hid_get_report_cb(weak stub): instance=%d id=%d type=%d buf=%p len=%d\n", instance, report_id, report_type, buffer, reqlen);
     return 0;
 }
 
-uint16_t tud_hid_get_report_cb(uint8_t report_id, hid_report_type_t report_type, uint8_t *buffer, uint16_t reqlen) {
-    return hid_get_report_cb(report_id, report_type, buffer, reqlen);
+uint16_t tud_hid_get_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_t report_type, uint8_t *buffer, uint16_t reqlen) {
+    return hid_get_report_cb(instance, report_id, report_type, buffer, reqlen);
 }
 
 // Invoked when received SET_REPORT control request or received data on OUT
 // endpoint ( Report ID = 0, Type = 0 )
-__attribute__((weak)) void hid_set_report_cb(uint8_t report_id, hid_report_type_t report_type, uint8_t const *buffer, uint16_t bufsize) {
-    printf("hid_set_report_cb(weak stub): id=%d type=%d buf=%p size=%d\n", report_id, report_type, buffer, bufsize);
+__attribute__((weak)) void hid_set_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_t report_type, uint8_t const *buffer, uint16_t bufsize) {
+    printf("hid_set_report_cb(weak stub): instance=%d id=%d type=%d buf=%p size=%d\n", instance, report_id, report_type, buffer, bufsize);
 }
 
-void tud_hid_set_report_cb(uint8_t report_id, hid_report_type_t report_type, uint8_t const *buffer, uint16_t bufsize) {
-    hid_set_report_cb(report_id, report_type, buffer, bufsize);
+void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_t report_type, uint8_t const *buffer, uint16_t bufsize) {
+    hid_set_report_cb(instance, report_id, report_type, buffer, bufsize);
 }
