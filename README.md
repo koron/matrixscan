@@ -3,7 +3,7 @@
 How to build:
 
 ```console
-$ cmake -B build
+$ cmake -B build -DCMAKE_DEPENDS_USE_COMPILER=OFF
 $ make -j4 -C build
 ```
 
